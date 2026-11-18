@@ -103,6 +103,7 @@ npx @modelcontextprotocol/inspector node dist/index.js
 ## Security notes
 
 - **OpenStreetMap text is untrusted.** Names, addresses and websites come from data anyone can edit and end up in the model's context, so they are a prompt-injection channel. Before they reach a tool result, `src/lib/sanitize.ts` removes control, zero-width, bidi-override and Unicode tag characters (a way to hide text), caps lengths and drops websites that are not plain `http(s)` URLs. This does **not** stop instructions written in ordinary visible words, so clients and models must still treat tool output as data. [`mcp-audit eval`](https://github.com/zelaplagg/mcp-audit) measures how well a model resists that; see its README.
+- **Audited with its own tooling.** `mcp-audit scan -- node dist/index.js` ([mcp-audit](https://github.com/zelaplagg/mcp-audit)) reports no findings for this server. That checks what the server advertises (descriptions, schemas, annotations), not what its code does.
 - **No user text in queries.** The Overpass query is built only from numbers and a fixed category table.
 - **HTTP mode is authenticated and rate limited** (bearer token, per-IP limits), and the server calls only the three public APIs listed below.
 
