@@ -1,0 +1,41 @@
+{
+  "name": "travel-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for trip planning on open data: geocoding, weather forecast, nearby places and a weather-aware day plan.",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "travel-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --test test/*.test.ts",
+    "start": "node dist/index.js",
+    "start:http": "node dist/http.js",
+    "dev": "node src/index.ts",
+    "dev:http": "node src/http.ts"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "travel",
+    "typescript"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "^5.8.3"
+  }
+}
