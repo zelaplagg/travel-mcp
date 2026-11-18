@@ -3,6 +3,7 @@ import { ToolError } from '../lib/errors.ts';
 import { haversineM } from '../lib/geo.ts';
 import { fetchJson } from '../lib/http.ts';
 import { MinIntervalLimiter } from '../lib/rateLimiter.ts';
+import { cleanText, safeHttpUrl } from '../lib/sanitize.ts';
 import { assertCoordinates } from '../lib/validate.ts';
 import type { Place, PlaceCategory, PlaceFinder } from '../types.ts';
 
@@ -101,13 +102,13 @@ export class OverpassClient implements PlaceFinder {
     const places: Place[] = [];
     for (const element of data.elements ?? []) {
       const tags = element.tags ?? {};
-      const name = tags['name'];
+      const name = cleanText(tags['name'] ?? '');
       const lat = element.lat ?? element.center?.lat;
       const lon = element.lon ?? element.center?.lon;
       const category = categoryOf(tags, categories);
       if (!name || lat === undefined || lon === undefined || !category) continue;
 
-      const website = tags['website'] ?? tags['contact:website'];
+      const website = safeHttpUrl(tags['website'] ?? tags['contact:website']);
       places.push({
         id: `${element.type}/${element.id}`,
         name,

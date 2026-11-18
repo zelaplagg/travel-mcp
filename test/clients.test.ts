@@ -142,3 +142,33 @@ test('Overpass: validates input', async () => {
   await assert.rejects(client.findNearby(0, 0, ['park'], 1000, 0), ToolError);
   await assert.rejects(client.findNearby(100, 0, ['park'], 1000, 10), ToolError);
 });
+
+test('Nominatim: sanitises untrusted OSM text', async () => {
+  const hidden = String.fromCodePoint(0xe0049, 0xe0067);
+  mockFetch(() =>
+    jsonResponse([
+      { lat: '1', lon: '2', display_name: `Hofburg${hidden}\u202e, Wien`, name: `Hofburg\n${'x'.repeat(500)}`, address: { country: 'Österreich\u200b' } },
+    ]),
+  );
+  const [result] = await new NominatimClient({ limiter: noLimit() }).geocode('hofburg');
+  assert.equal(result?.displayName, 'Hofburg, Wien');
+  assert.ok((result?.name.length ?? 0) <= 200);
+  assert.ok(!/[\u0000-\u001f\u200b\u202e]/.test(result?.name ?? ''));
+  assert.equal(result?.country, 'Österreich');
+});
+
+test('Overpass: sanitises names and drops non-http websites', async () => {
+  mockFetch(() =>
+    jsonResponse({
+      elements: [
+        { type: 'node', id: 1, lat: 48.2, lon: 16.4, tags: { name: `Museum\u200b${String.fromCodePoint(0xe0041)}`, tourism: 'museum', website: 'javascript:alert(1)' } },
+        { type: 'node', id: 2, lat: 48.2, lon: 16.4, tags: { name: '\u200b\u202e', tourism: 'museum' } },
+        { type: 'node', id: 3, lat: 48.2, lon: 16.4, tags: { name: 'Cafe', amenity: 'cafe', website: 'https://example.org' } },
+      ],
+    }),
+  );
+  const places = await new OverpassClient({ limiter: noLimit() }).findNearby(48.2, 16.4, ['museum', 'cafe'], 1000, 10);
+  assert.deepEqual(places.map((p) => p.name).sort(), ['Cafe', 'Museum']);
+  assert.equal(places.find((p) => p.name === 'Museum')?.website, undefined);
+  assert.equal(places.find((p) => p.name === 'Cafe')?.website, 'https://example.org');
+});

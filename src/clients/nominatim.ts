@@ -3,6 +3,7 @@ import { TtlCache } from '../lib/cache.ts';
 import { ToolError } from '../lib/errors.ts';
 import { fetchJson } from '../lib/http.ts';
 import { MinIntervalLimiter } from '../lib/rateLimiter.ts';
+import { cleanText } from '../lib/sanitize.ts';
 import type { GeoResult, Geocoder } from '../types.ts';
 
 interface NominatimItem {
@@ -49,16 +50,19 @@ export class NominatimClient implements Geocoder {
     const items = await fetchJson<NominatimItem[]>(`${this.baseUrl}/search?${params.toString()}`);
 
     const results = items
-      .map(
-        (item): GeoResult => ({
-          name: item.name?.trim() || item.display_name,
-          displayName: item.display_name,
+      .map((item): GeoResult => {
+        // OSM text is untrusted: strip hidden characters and cap the length.
+        const displayName = cleanText(String(item.display_name ?? ''), 300);
+        const country = item.address?.country ? cleanText(item.address.country, 100) : '';
+        return {
+          name: cleanText(String(item.name ?? ''), 200) || displayName,
+          displayName,
           latitude: Number(item.lat),
           longitude: Number(item.lon),
-          country: item.address?.country,
-        }),
-      )
-      .filter((r) => Number.isFinite(r.latitude) && Number.isFinite(r.longitude));
+          ...(country ? { country } : {}),
+        };
+      })
+      .filter((r) => r.displayName !== '' && Number.isFinite(r.latitude) && Number.isFinite(r.longitude));
 
     this.cache.set(cacheKey, results);
     return results;
